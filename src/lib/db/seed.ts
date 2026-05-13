@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { db } from "./db"
 import * as schema from "./schema"
 import { EventItem } from "@/app/types"
+import { userRepo } from "@/server/repositories"
 
 type SeedUser = {
    name: string
@@ -89,10 +90,6 @@ function getAuthHeaders() {
    })
 }
 
-function slugFromLink(link: string) {
-   return link.split("/").filter(Boolean).at(-1) ?? link
-}
-
 function resolvePriceIDR(price: { regular: number; sale?: number; currency: string }) {
    if (price.currency !== "IDR") {
       throw new Error(`Unsupported currency for seed: ${price.currency}`)
@@ -110,6 +107,10 @@ async function createAuthUsers() {
          headers,
          body: seedUser,
       })
+
+      if (seedUser.email === "admin@bcc.local") {
+         await userRepo.setRole(seedUser.email, "admin")
+      }
 
       users.push({
          id: result.user.id,
@@ -157,7 +158,9 @@ async function createReservationsAndPayments(params: {
       id: crypto.randomUUID(),
       reservationId: reservation.id,
       userId: reservation.userId,
+      orderId: `SEED-${reservation.id}`,
       amountIDR: paymentByEventId.get(reservation.eventId) ?? 0,
+      status: "paid" as const,
    }))
 
    await db.insert(schema.reservation).values(reservations)

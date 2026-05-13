@@ -4,7 +4,7 @@ import { NextRequest } from "next/server"
 
 export async function GET(request: NextRequest) {
    const session = await auth.api.getSession({
-      headers: await request.headers
+      headers: request.headers
    })
 
    if (!session) {
@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
          status: 401,
          message: "You are not authorized to perform this action",
          data: null
-      })
+      }, { status: 401 })
    }
 
-   const reservations = await reservationRepo.getOwned(session.user.id)
+   const reservations = await reservationRepo.getOwnedDetailed(session.user.id)
    return Response.json({
       status: 200,
       message: "Successfully fetched reservations",

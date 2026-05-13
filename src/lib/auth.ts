@@ -10,6 +10,16 @@ export const auth = betterAuth({
       schema: schema 
    }),
    baseURL: env.BETTER_AUTH_URL,
+   user: {
+      additionalFields: {
+         role: {
+            type: ["admin", "user"],
+            required: false,
+            defaultValue: "user",
+            input: false,
+         },
+      },
+   },
    emailAndPassword: {
       enabled: true,
    },
@@ -17,6 +27,7 @@ export const auth = betterAuth({
       github: {
          clientId: env.GITHUB_CLIENT_ID,
          clientSecret: env.GITHUB_CLIENT_SECRET,
+         scope: ["read:user", "user:email"],
       }
    }
 })

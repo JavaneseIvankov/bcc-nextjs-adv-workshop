@@ -1,28 +1,11 @@
-import { EventItem } from "@/app/types";
-import { eventRepo } from "@/server/repositories";
-import { NextRequest } from "next/server";
+import { getCachedEventList } from "@/server/event-queries";
 
-
-export async function GET(request: NextRequest) {
-   const events = await eventRepo.getAll()
-   const eventItems= events.map((evt) => ({
-      name: evt.title,
-      date: evt.date,
-      image: {
-         src: evt.imageUrl,
-         alt: evt.title
-      },
-      slug: evt.slug,
-      description: evt.description,
-      price: {
-         regular: evt.priceIDR,
-         currency: "IDR"
-      },
-   }))
+export async function GET() {
+   const eventItems = await getCachedEventList()
 
    return Response.json({
       status: 200,
-      message: "Succefully fetched events",
+      message: "Successfully fetched events",
       data: eventItems
    }) 
 }

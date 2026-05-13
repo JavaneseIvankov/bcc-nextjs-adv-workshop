@@ -4,6 +4,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import Link from "next/link";
 
 interface EventDetailProps {
@@ -21,9 +22,12 @@ const EventDetail = ({ event, className }: EventDetailProps) => {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
           <div className="overflow-hidden  border bg-muted/30">
             <AspectRatio ratio={1.2}>
-              <img
+              <Image
                 src={image.src}
                 alt={image.alt}
+                fill
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                unoptimized
                 className="block size-full object-cover object-center"
               />
             </AspectRatio>

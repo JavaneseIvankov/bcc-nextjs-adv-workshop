@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import Image, { type ImageProps } from "next/image";
 
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,7 @@ interface LogoProps extends React.HTMLAttributes<HTMLAnchorElement> {
   children: React.ReactNode;
 }
 
-interface LogoImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface LogoImageProps extends Omit<ImageProps, "src" | "alt"> {
   src: string;
   alt: string;
   className?: string;
@@ -96,14 +97,25 @@ const Logo = ({ url, className, children, ...props }: LogoProps) => {
 };
 
 const LogoImage = ({ src, alt, className, ...props }: LogoImageProps) => (
-  <img src={src} alt={alt} className={cn("block h-8", className)} {...props} />
+  <Image
+    src={src}
+    alt={alt}
+    width={typeof props.width === "number" ? props.width : 128}
+    height={typeof props.height === "number" ? props.height : 32}
+    unoptimized={props.unoptimized ?? true}
+    className={cn("block h-8 w-auto", className)}
+    {...props}
+  />
 );
 
 const LogoImageMobile = ({ src, alt, className, ...props }: LogoImageProps) => (
-  <img
+  <Image
     src={src}
     alt={alt}
-    className={cn("flex h-8 md:hidden", className)}
+    width={typeof props.width === "number" ? props.width : 128}
+    height={typeof props.height === "number" ? props.height : 32}
+    unoptimized={props.unoptimized ?? true}
+    className={cn("flex h-8 w-auto md:hidden", className)}
     {...props}
   />
 );
@@ -114,10 +126,13 @@ const LogoImageDesktop = ({
   className,
   ...props
 }: LogoImageProps) => (
-  <img
+  <Image
     src={src}
     alt={alt}
-    className={cn("hidden h-8 md:flex", className)}
+    width={typeof props.width === "number" ? props.width : 128}
+    height={typeof props.height === "number" ? props.height : 32}
+    unoptimized={props.unoptimized ?? true}
+    className={cn("hidden h-8 w-auto md:flex", className)}
     {...props}
   />
 );

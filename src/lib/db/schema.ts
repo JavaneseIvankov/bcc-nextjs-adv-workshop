@@ -1,132 +1,112 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, bigint } from "drizzle-orm/pg-core";
+import { bigint, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { user } from "./auth-schema";
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+export * from "./auth-schema";
 
-export const session = pgTable(
-  "session",
+export const ROLES = ["admin", "user"] as const;
+export type Role = (typeof ROLES)[number];
+
+export const RESERVATION_STATUSES = ["pending", "paid", "cancelled"] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
+
+export const PAYMENT_STATUSES = ["pending", "paid", "failed"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export const event = pgTable(
+  "event",
   {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
-    token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    ipAddress: text("ip_address"),
-    userAgent: text("user_agent"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-  },
-  (table) => [index("session_userId_idx").on(table.userId)],
-);
-
-export const account = pgTable(
-  "account",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    accessToken: text("access_token"),
-    refreshToken: text("refresh_token"),
-    idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-    scope: text("scope"),
-    password: text("password"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("account_userId_idx").on(table.userId)],
-);
-
-export const verification = pgTable(
-  "verification",
-  {
-    id: text("id").primaryKey(),
-    identifier: text("identifier").notNull(),
-    value: text("value").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
+    imageUrl: text("image_url").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description").notNull(),
+    date: text("date").notNull(),
+    location: text("location").notNull(),
+    priceIDR: bigint("price_idr", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
+  (table) => [uniqueIndex("event_slug_unique").on(table.slug)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
-  sessions: many(session),
-  accounts: many(account),
+export const reservation = pgTable(
+  "reservation",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status")
+      .$type<ReservationStatus>()
+      .default("pending")
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("reservation_user_event_unique").on(table.userId, table.eventId),
+  ],
+);
+
+export const payment = pgTable(
+  "payment",
+  {
+    id: text("id").primaryKey(),
+    reservationId: text("reservation_id")
+      .notNull()
+      .references(() => reservation.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    orderId: text("order_id").notNull().unique(),
+    redirectUrl: text("redirect_url"),
+    amountIDR: bigint("amount_idr", { mode: "number" }).notNull(),
+    status: text("status").$type<PaymentStatus>().default("pending").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("payment_reservation_id_idx").on(table.reservationId),
+    index("payment_user_id_idx").on(table.userId),
+  ],
+);
+
+export const eventRelations = relations(event, ({ many }) => ({
+  reservations: many(reservation),
 }));
 
-export const sessionRelations = relations(session, ({ one }) => ({
+export const reservationRelations = relations(reservation, ({ one, many }) => ({
+  event: one(event, {
+    fields: [reservation.eventId],
+    references: [event.id],
+  }),
   user: one(user, {
-    fields: [session.userId],
+    fields: [reservation.userId],
     references: [user.id],
   }),
+  payments: many(payment),
 }));
 
-export const accountRelations = relations(account, ({ one }) => ({
+export const paymentRelations = relations(payment, ({ one }) => ({
   user: one(user, {
-    fields: [account.userId],
+    fields: [payment.userId],
     references: [user.id],
   }),
+  reservation: one(reservation, {
+    fields: [payment.reservationId],
+    references: [reservation.id],
+  }),
 }));
-
-export const event = pgTable("event", {
-  id: text("id").primaryKey(),
-  imageUrl: text("image_url").notNull(),
-  title: text("title").notNull(),
-  slug: text("slug").notNull(),
-  description: text("description").notNull(),
-  date: text("date").notNull(),
-  location: text("location").notNull(),
-  priceIDR: bigint("price_idr", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
-
-export const reservation = pgTable("reservation", {
-  id: text("id").primaryKey(),
-  eventId: text("event_id").notNull(),
-  userId: text("user_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
-
-export const payment = pgTable("payment", {
-  id: text("id").primaryKey(),
-  reservationId: text("reservation_id").notNull(),
-  userId: text("user_id").notNull(),
-  amountIDR: bigint("amount_idr", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});

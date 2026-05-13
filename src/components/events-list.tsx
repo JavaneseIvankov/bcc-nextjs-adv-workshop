@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 type EventCardProps = EventItem;
 
@@ -50,9 +51,12 @@ const EventCard = ({
          <Card className="h-full overflow-hidden p-0">
             <CardHeader className="relative block p-0">
                <AspectRatio ratio={1.268115942} className="overflow-hidden">
-                  <img
+                  <Image
                      src={image.src}
                      alt={image.alt}
+                     fill
+                     sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                     unoptimized
                      className="block size-full object-cover object-center"
                   />
                </AspectRatio>

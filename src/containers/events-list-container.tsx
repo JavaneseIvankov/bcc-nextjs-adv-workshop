@@ -1,11 +1,10 @@
 import { EventsList } from "@/components/events-list";
-import { env } from "@/lib/env";
+import { getCachedEventList } from "@/server/event-queries";
 
 export async function EventsListContainer() {
-   const res = await fetch(`${env.NEXT_PUBLIC_APP_URL}/api/events`)
-   const data = await res.json()
+   const events = await getCachedEventList()
 
    return (
-      <EventsList eventsList={data.data}/>
+      <EventsList eventsList={events}/>
    )
 }
