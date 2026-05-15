@@ -37,6 +37,7 @@ export async function DELETE(
   }
 
   revalidateTag("events", "max");
+
   return Response.json({
     status: 200,
     message: "Event removed",

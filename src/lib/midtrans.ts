@@ -1,9 +1,6 @@
-import { env } from "@/lib/env";
-import { createHash } from "node:crypto";
+import midtransClient from "midtrans-client";
 
-const SNAP_BASE_URL = env.MIDTRANS_IS_PRODUCTION
-  ? "https://app.midtrans.com"
-  : "https://app.sandbox.midtrans.com";
+import { env } from "@/lib/env.server";
 
 export type MidtransNotificationPayload = {
   order_id: string;
@@ -15,9 +12,33 @@ export type MidtransNotificationPayload = {
   fraud_status?: string;
 };
 
-function getAuthHeader() {
-  const encoded = Buffer.from(`${env.MIDTRANS_SERVER_KEY}:`).toString("base64");
-  return `Basic ${encoded}`;
+type MidtransTransactionStatus = {
+  order_id: string;
+  transaction_status: string;
+  fraud_status?: string;
+};
+
+const snap = new midtransClient.Snap({
+  isProduction: env.MIDTRANS_IS_PRODUCTION,
+  serverKey: env.MIDTRANS_SERVER_KEY,
+});
+
+function getMidtransErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const maybeApiError = error as Error & {
+      ApiResponse?: {
+        status_message?: string;
+      };
+    };
+
+    return (
+      maybeApiError.ApiResponse?.status_message ??
+      error.message ??
+      "Unable to create Midtrans transaction"
+    );
+  }
+
+  return "Unable to create Midtrans transaction";
 }
 
 export async function createSnapTransaction(input: {
@@ -29,14 +50,8 @@ export async function createSnapTransaction(input: {
     email: string;
   };
 }) {
-  const response = await fetch(`${SNAP_BASE_URL}/snap/v1/transactions`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: getAuthHeader(),
-    },
-    body: JSON.stringify({
+  try {
+    const transaction = await snap.createTransaction({
       transaction_details: {
         order_id: input.orderId,
         gross_amount: input.grossAmount,
@@ -56,37 +71,26 @@ export async function createSnapTransaction(input: {
       credit_card: {
         secure: true,
       },
-    }),
-  });
+    });
 
-  const payload = (await response.json()) as
-    | {
-        token: string;
-        redirect_url: string;
-      }
-    | {
-        status_message?: string;
-      };
+    if (!transaction.redirect_url) {
+      throw new Error("Unable to create Midtrans transaction");
+    }
 
-  if (!response.ok || !("token" in payload) || !("redirect_url" in payload)) {
-    const message =
-      "status_message" in payload
-        ? payload.status_message
-        : "Unable to create Midtrans transaction";
-    throw new Error(message ?? "Unable to create Midtrans transaction");
+    return {
+      redirectUrl: transaction.redirect_url,
+    };
+  } catch (error) {
+    throw new Error(getMidtransErrorMessage(error));
   }
-
-  return {
-    redirectUrl: payload.redirect_url,
-  };
 }
 
-export function verifyMidtransSignature(payload: MidtransNotificationPayload) {
-  if (!payload.signature_key) {
-    return false;
+export async function getMidtransNotificationStatus(
+  payload: MidtransNotificationPayload,
+): Promise<MidtransTransactionStatus> {
+  if (!payload.transaction_id) {
+    throw new Error("Missing transaction_id in Midtrans notification");
   }
 
-  const raw = `${payload.order_id}${payload.status_code}${payload.gross_amount}${env.MIDTRANS_SERVER_KEY}`;
-  const signature = createHash("sha512").update(raw).digest("hex");
-  return signature === payload.signature_key;
+  return snap.transaction.notification(payload);
 }

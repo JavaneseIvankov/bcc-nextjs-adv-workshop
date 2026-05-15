@@ -61,7 +61,7 @@ export function SignupFormContainer({ className }: SignupFormContainerProps) {
       error={error}
       isSubmitting={isSubmitting}
       onEmailSubmit={handleEmailSubmit}
-      onGithubSubmit={handleGithubSubmit    }
+      onGithubSubmit={handleGithubSubmit}
     />
   );
 }

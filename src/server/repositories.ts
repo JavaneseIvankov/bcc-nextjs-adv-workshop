@@ -234,8 +234,8 @@ export const userRepo = {
       .set({ role, updatedAt: new Date() })
       .where(eq(user.email, email))
       .returning({ id: user.id, role: user.role });
-
     return rows[0] ?? null;
+
   },
 
   async getRoleById(id: string) {

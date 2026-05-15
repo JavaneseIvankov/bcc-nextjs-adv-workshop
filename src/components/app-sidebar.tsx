@@ -16,7 +16,7 @@ export async function Sidebar() {
     return null;
   }
 
-  const role = await userRepo.getRoleById(session.user.id);
+  const role = session.user.role;
 
   return (
     <aside className="sticky top-4 hidden w-[220px] self-start lg:block">

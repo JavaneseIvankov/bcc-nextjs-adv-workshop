@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { cn } from "@/lib/utils";
 
 type LogoutButtonProps = {

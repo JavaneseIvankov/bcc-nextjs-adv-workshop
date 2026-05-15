@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         email: session.user.email,
       },
     });
+
     await db.transaction(async (tx) => {
       const existingReservation = await tx
         .select({ id: reservation.id })

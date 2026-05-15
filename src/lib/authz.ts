@@ -22,6 +22,8 @@ export async function requireSession() {
 export async function requireAdmin() {
   const session = await requireSession();
 
+  // This stays as foundation code so the live demo can focus on proxy.ts
+  // and the third-party wiring rather than page-level authorization checks.
   const rows = await db
     .select({ role: user.role })
     .from(user)

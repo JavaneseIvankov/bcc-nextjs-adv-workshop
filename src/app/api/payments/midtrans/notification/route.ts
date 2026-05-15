@@ -1,6 +1,6 @@
 import {
+  getMidtransNotificationStatus,
   type MidtransNotificationPayload,
-  verifyMidtransSignature,
 } from "@/lib/midtrans";
 import { paymentRepo, reservationRepo } from "@/server/repositories";
 import { NextRequest } from "next/server";
@@ -18,18 +18,25 @@ function toReservationStatus(transactionStatus: string) {
 export async function POST(request: NextRequest) {
   const payload = (await request.json()) as MidtransNotificationPayload;
 
-  if (!verifyMidtransSignature(payload)) {
+  let notification;
+  try {
+    notification = await getMidtransNotificationStatus(payload);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invalid Midtrans notification";
+
     return Response.json(
-      { status: 401, message: "Invalid signature", data: null },
+      { status: 401, message, data: null },
       { status: 401 },
     );
   }
 
   const resolvedStatus =
-    payload.transaction_status === "settlement" ||
-    payload.transaction_status === "capture"
+    notification.transaction_status === "settlement" ||
+    (notification.transaction_status === "capture" &&
+      notification.fraud_status !== "challenge")
       ? "paid"
-      : payload.transaction_status === "pending"
+      : notification.transaction_status === "pending"
         ? "pending"
         : "failed";
 
@@ -40,7 +47,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const payment = await paymentRepo.getByOrderId(payload.order_id);
+  const payment = await paymentRepo.getByOrderId(notification.order_id);
   if (!payment) {
     return Response.json(
       { status: 404, message: "Order not found", data: null },
@@ -49,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Idempotent: we always write the latest status payload for the same order id.
-  const updatedPayment = await paymentRepo.updateByOrderId(payload.order_id, {
+  const updatedPayment = await paymentRepo.updateByOrderId(notification.order_id, {
     status: resolvedStatus,
   });
 
