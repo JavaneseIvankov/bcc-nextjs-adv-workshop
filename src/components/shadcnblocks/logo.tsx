@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import Image, { type ImageProps } from "next/image";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
@@ -12,7 +13,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 
-interface LogoProps extends React.HTMLAttributes<HTMLAnchorElement> {
+interface LogoProps extends Omit<React.ComponentProps<typeof Link>, "href"> {
   url: string;
   className?: string;
   children: React.ReactNode;
@@ -86,13 +87,13 @@ const LogoBrandDownload = ({
 
 const Logo = ({ url, className, children, ...props }: LogoProps) => {
   return (
-    <a
+    <Link
       href={url}
       className={cn("flex max-h-8 items-center gap-2", className)}
       {...props}
     >
       {children}
-    </a>
+    </Link>
   );
 };
 

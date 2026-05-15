@@ -3,12 +3,18 @@ import { auth } from "@/lib/auth";
 import { userRepo } from "@/server/repositories";
 import { headers } from "next/headers";
 import { LogoutButton } from "./logout-button";
+import { redirect } from 'next/navigation';
 
 export async function AppHeader() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const role = session ? await userRepo.getRoleById(session.user.id) : null;
+
+  if (!session) {
+     redirect('/login');
+  }
+
+  const role = session.user.role;
 
   return (
     <header className="border-b bg-background">

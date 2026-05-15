@@ -30,4 +30,10 @@ export const auth = betterAuth({
          scope: ["read:user", "user:email"],
       }
    },
+   session: {
+      cookieCache: {
+         enabled: true,
+         maxAge: 5 * 60
+      }
+   }
 })

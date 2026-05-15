@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from 'next/link';
 
 type EventCardProps = EventItem;
 
@@ -44,7 +45,7 @@ const EventCard = ({
    const { regular, sale, currency } = price;
 
    return (
-      <a
+      <Link
          href={`/events/${slug}`}
          className="block h-full w-full max-w-md transition-opacity hover:opacity-80"
       >
@@ -92,7 +93,7 @@ const EventCard = ({
                </div>
             </CardContent>
          </Card>
-      </a>
+      </Link>
    );
 };
 
